@@ -1,47 +1,36 @@
-name: Auto Comment Bot
+name: Auto Comment on Issues
 
 on:
   issues:
     types: [opened, labeled]
 
 jobs:
-  auto-comment:
+  auto_comment:
     runs-on: ubuntu-latest
-    permissions:
-      issues: write
     steps:
-      - name: Auto comment on bug issues
-        if: contains(github.event.issue.labels.*.name, 'bug')
+      - name: Check issue labels and add comment
         uses: actions/github-script@v6
         with:
           script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: 'Thank you. We will fix it. Best regards, saigoles.'
-            })
-
-      - name: Auto comment on feature issues
-        if: contains(github.event.issue.labels.*.name, 'feature')
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: 'Thank you, we will consider to include this feature. Best regards, saigoles.'
-            })
-
-      - name: Auto comment on discussion issues
-        if: contains(github.event.issue.labels.*.name, 'discussion')
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: 'Happy to discuss this topic with you. Best regards, saigoles.'
-            })
+            const issue = context.payload.issue;
+            const labels = issue.labels.map(label => label.name);
+            const owner = context.repo.owner;
+            
+            let comment = null;
+            
+            if (labels.includes('bug')) {
+              comment = `Thank you. We will fix it. Best regards, ${owner}.`;
+            } else if (labels.includes('feature')) {
+              comment = `Thank you, we will consider to include this feature. Best regards, ${owner}.`;
+            } else if (labels.includes('discussion')) {
+              comment = `Happy to discuss this topic with you. Best regards, ${owner}.`;
+            }
+            
+            if (comment) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: comment
+              });
+            }
